@@ -138,11 +138,49 @@ fn led_blink() -> ! {
 
     gpioe.moder().modify(|_, w| w.moder1().output());
 
+    uart_init();
+
     loop {
         gpioe.bsrr().write(|w| w.bs1().set_bit());
+        uart_puts("Hello World\r\n");
         delay(40_000_000);
         gpioe.bsrr().write(|w| w.br1().set_bit());
         delay(40_000_000);
+    }
+}
+
+fn uart_init() {
+    let rcc = unsafe { &*device::RCC::ptr() };
+    let gpiod = unsafe { &*device::GPIOD::ptr() };
+    let usart3 = unsafe { &*device::USART3::ptr() };
+
+    rcc.ahb4enr().modify(|_, w| w.gpioden().set_bit());
+    rcc.apb1lenr().modify(|_, w| w.usart3en().set_bit());
+    asm::dmb();
+
+    gpiod.moder().modify(|_, w| {
+        w.moder8().alternate()
+         .moder9().alternate()
+    });
+    gpiod.afrh().modify(|_, w| w.afr8().af7().afr9().af7());
+
+    usart3.cr1().modify(|_, w| w.ue().clear_bit());
+    usart3.brr().write(|w| unsafe { w.brr().bits(0x0353) });
+    usart3.cr1().modify(|_, w| w.te().set_bit().re().set_bit().ue().set_bit());
+}
+
+fn uart_putc(c: u8) {
+    let usart3 = unsafe { &*device::USART3::ptr() };
+    while !usart3.isr().read().txe().bit_is_set() {}
+    usart3.tdr().write(|w| unsafe { w.tdr().bits(c.into()) });
+}
+
+fn uart_puts(s: &str) {
+    for &b in s.as_bytes() {
+        if b == b'\n' {
+            uart_putc(b'\r');
+        }
+        uart_putc(b);
     }
 }
 
