@@ -46,7 +46,10 @@ Tasks:
 4. In link.ld: PROVIDE(NMI = DefaultExceptionHandler), etc. This makes handlers weak — your #[no_mangle] pub extern "C" fn HardFault() overrides the default without needing linkage attributes.  
 5. Test by triggering HardFault (e.g., read *VOID(0xFFFFFFFF) in Reset). Use cargo-flash + RTT or a breakpoint to confirm the handler fires.
 Why: This mirrors the exact mechanism cortex-m-rt uses internally. After this phase, you understand how #[exception] works under the hood.
-Phase 3 — Clock & Power Configuration (STM32H7-specific)
+
+---
+
+## Phase 3 — Clock & Power Configuration (STM32H7-specific)
 Goal: Switch from HSI (default 64 MHz) to PLL1 @ 400 MHz, configure SMPS.
 Tasks:
 1. PWR configuration for SMPS  
