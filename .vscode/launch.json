@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "cwd": "${workspaceRoot}",
+      "type": "probe-rs-debug",
+      "request": "launch",
+      "name": "Debug CM7",
+      "chip": "STM32H755ZITx",
+      "coreConfigs": [
+        {
+          "coreIndex": 0,
+          "programBinary": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/cm7"
+        }
+      ]
+    }
+  ]
+}

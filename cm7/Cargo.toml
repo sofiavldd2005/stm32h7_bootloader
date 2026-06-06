@@ -1,0 +1,11 @@
+[package]
+name = "cm7"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+stm32h7-staging = { version = "0.17.0", default-features = false, features = [
+  "stm32h747cm7",
+] }
+
+cortex-m = "0.7.7"
