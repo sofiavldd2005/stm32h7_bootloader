@@ -1,0 +1,4 @@
+cargo:rustc-link-arg=-Tlink.x
+cargo:rustc-link-search=/home/sofia/Documents/BootLoader/cm4
+cargo:rerun-if-changed=link.x
+cargo:rerun-if-changed=memory.x

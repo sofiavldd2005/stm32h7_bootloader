@@ -1,0 +1,13 @@
+[package]
+name = "cm4"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+stm32h7-staging = { version = "0.17.0", default-features = false, features = [
+  "stm32h747cm4",
+] }
+
+cortex-m = "0.7.7"

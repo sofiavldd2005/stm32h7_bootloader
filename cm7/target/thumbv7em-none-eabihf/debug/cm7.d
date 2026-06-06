@@ -1,0 +1,1 @@
+/home/sofia/Documents/BootLoader/cm7/target/thumbv7em-none-eabihf/debug/cm7: /home/sofia/Documents/BootLoader/cm7/build.rs /home/sofia/Documents/BootLoader/cm7/link.x /home/sofia/Documents/BootLoader/cm7/memory.x /home/sofia/Documents/BootLoader/cm7/src/main.rs

@@ -1,3 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["cm7"]
+
+# Build individual crates:
+#   cd cm7 && cargo build
+#   cd cm4 && cargo build
+#   make cm7
+#   make cm4
+#   make flash-cm7
+
