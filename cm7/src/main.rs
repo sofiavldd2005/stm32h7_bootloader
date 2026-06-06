@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use core::arch::asm;
 use core::panic::PanicInfo;
 
 use cortex_m::asm;
@@ -47,20 +48,20 @@ pub static EXCEPTIONS: [Vector; 14] = [
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Reset() -> ! {
-    let gpiob = &*device::GPIOB::ptr();
-    let rcc = &*device::RCC::ptr();
+    let gpioe = unsafe { &*device::GPIOE::ptr() };
+    let rcc = unsafe { &*device::RCC::ptr() };
 
-    rcc.ahb4enr().modify(|_, w| w.gpioben().set_bit());
+    rcc.ahb4enr().modify(|_, w| w.gpioeen().set_bit());
     asm::dmb();
-    gpiob.moder().modify(|_, w| w.moder0().output());
+    gpioe.moder().modify(|_, w| w.moder1().output());
 
-    gpiob.bsrr().write(|w| w.bs0().set_bit());
-    delay(2_000_000);
-    gpiob.bsrr().write(|w| w.br0().set_bit());
-    delay(2_000_000);
-    gpiob.bsrr().write(|w| w.bs0().set_bit());
-    delay(2_000_000);
-    gpiob.bsrr().write(|w| w.br0().set_bit());
+    gpioe.bsrr().write(|w| w.bs1().set_bit());
+    delay(6_000_000);
+    gpioe.bsrr().write(|w| w.br1().set_bit());
+    delay(6_000_000);
+    gpioe.bsrr().write(|w| w.bs1().set_bit());
+    delay(6_000_000);
+    gpioe.bsrr().write(|w| w.br1().set_bit());
 
     system_init();
     led_blink()
@@ -74,7 +75,7 @@ fn system_init() {
     rcc.apb4enr().modify(|_, w| w.syscfgen().set_bit());
     asm::dmb();
 
-    pwr.cr3().modify(|_, w| unsafe {
+    pwr.cr3().modify(|_, w| {
         w.sden().set_bit()
          .ldoen().clear_bit()
          .bypass().clear_bit()
@@ -130,24 +131,28 @@ fn system_init() {
 
 fn led_blink() -> ! {
     let rcc = unsafe { &*device::RCC::ptr() };
-    let gpiob = unsafe { &*device::GPIOB::ptr() };
+    let gpioe = unsafe { &*device::GPIOE::ptr() };
 
-    rcc.ahb4enr().modify(|_, w| w.gpioben().set_bit());
+    rcc.ahb4enr().modify(|_, w| w.gpioeen().set_bit());
     asm::dmb();
 
-    gpiob.moder().modify(|_, w| w.moder0().output());
+    gpioe.moder().modify(|_, w| w.moder1().output());
 
     loop {
-        gpiob.bsrr().write(|w| w.bs0().set_bit());
-        delay(400_000_000);
-        gpiob.bsrr().write(|w| w.br0().set_bit());
-        delay(400_000_000);
+        gpioe.bsrr().write(|w| w.bs1().set_bit());
+        delay(40_000_000);
+        gpioe.bsrr().write(|w| w.br1().set_bit());
+        delay(40_000_000);
     }
 }
 
 fn delay(cycles: u32) {
-    for _ in 0..cycles {
-        asm::nop();
+    let mut i = cycles;
+    while i != 0 {
+        //aw asm!("nop") instead of cortex_m::asm::nop() with options(nomem, nostack,
+        //preserves_flags).
+        unsafe { asm!("nop"); }
+        i -= 1;
     }
 }
 
