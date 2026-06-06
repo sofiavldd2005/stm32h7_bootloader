@@ -5,18 +5,21 @@
 - [x] Create cm4/ crate with its own vector table at 0x08100000
 - [x] Hold CM4 in reset via raw write to RCC_MP_C1GR1 (CM4RST bit)
 
-### 6.2 — CM4 Firmware (Planned)
-- [ ] CM4 blinks its own LED (e.g., PB1 = LD3 red)
-- [ ] Use stm32h7-staging PAC with stm32h747cm4 feature
-- [ ] CM4 linker script: FLASH at 0x08100000, RAM at 0x10000000 (DTCM)
-- [ ] Flashing: probe-rs can target either core via `--chip STM32H755ZITx` (core-select)
+### 6.2 — CM4 Firmware (Done)
+- [x] CM4 blinks LD3 (PB1, red LED)
+- [x] Use stm32h7-staging PAC with stm32h747cm4 feature
+- [x] CM4 linker script: FLASH at 0x08100000, RAM at 0x10000000 (DTCM)
+- [x] VTOR set to 0x08100000 at start of Reset
 
-### 6.3 — CM7 Bootloader Logic (Planned)
-- [ ] Validate CM4 firmware CRC before launch
-- [ ] Release CM4 from reset, set CM4BOOT vector
-- [ ] Fail-safe: if CRC invalid, hold CM4 and signal error via UART/LED
+### 6.3 — CM7 Releases CM4 (Done)
+- [x] Release CM4 from reset (clear CM4RST) after UART init
+- [x] Print "CM4 released" via UART
 
-### 6.4 — Inter-Core Communication (Planned)
+### 6.4 — Firmware Validation (Future)
+- [ ] CRC32 validation of CM4 firmware before release
+- [ ] Fail-safe: hold CM4 + error pattern on LED if CRC mismatch
+
+### 6.5 — Inter-Core Communication (Future)
 - [ ] HSEM hardware semaphores for mutual exclusion
 - [ ] Shared memory mailbox in AXI SRAM (0x24000000)
 - [ ] Simple message protocol (ping/pong or shared state)

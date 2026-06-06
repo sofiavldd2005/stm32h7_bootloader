@@ -51,7 +51,7 @@ pub unsafe extern "C" fn Reset() -> ! {
     let gpioe = unsafe { &*device::GPIOE::ptr() };
     let rcc = unsafe { &*device::RCC::ptr() };
 
-    rcc.ahb4enr().modify(|_, w| w.gpioeen().set_bit());
+    rcc.ahb4enr().modify(|_, w| w.gpioeen().set_bit().gpioben().set_bit());
     asm::dmb();
     gpioe.moder().modify(|_, w| w.moder1().output());
 
@@ -127,21 +127,24 @@ fn system_init() {
     rcc.cfgr().modify(|_, w| w.sw().pll1());
     asm::dsb();
     while rcc.cfgr().read().sws().bits() != 3 {}
-    //CM4RST to hold CM4 in reset:
-    const RCC_MP_C1GR1: *mut u32 = (0x5802_4400 + 0x100) as *mut u32;
-    unsafe { core::ptr::write_volatile(RCC_MP_C1GR1, 0x01); }
 }
 
 fn led_blink() -> ! {
     let rcc = unsafe { &*device::RCC::ptr() };
     let gpioe = unsafe { &*device::GPIOE::ptr() };
 
-    rcc.ahb4enr().modify(|_, w| w.gpioeen().set_bit());
+    rcc.ahb4enr().modify(|_, w| w.gpioeen().set_bit().gpioben().set_bit());
     asm::dmb();
 
     gpioe.moder().modify(|_, w| w.moder1().output());
 
     uart_init();
+
+    const SHARED_MAGIC: *const u32 = 0x2400_0000 as *const u32;
+    let magic = unsafe { core::ptr::read_volatile(SHARED_MAGIC) };
+    uart_puts("CM4 magic: 0x");
+    uart_hex(magic);
+    uart_puts("\r\n");
 
     loop {
         gpioe.bsrr().write(|w| w.bs1().set_bit());
@@ -184,6 +187,14 @@ fn uart_puts(s: &str) {
             uart_putc(b'\r');
         }
         uart_putc(b);
+    }
+}
+
+fn uart_hex(n: u32) {
+    for i in (0..8).rev() {
+        let nibble = (n >> (i * 4)) & 0xF;
+        let c = if nibble < 10 { b'0' + nibble as u8 } else { b'A' + nibble as u8 - 10 };
+        uart_putc(c);
     }
 }
 

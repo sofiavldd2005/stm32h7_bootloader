@@ -22,6 +22,12 @@ SECTIONS
     *(.text .text.*);
     *(.rodata .rodata.*);
   } > FLASH
+/*reserve the last 4 bytes of CM4 flash for a CRC32:
+ * */
+  .crc ORIGIN(FLASH) + LENGTH(FLASH) - 4 :
+  {
+    LONG(0x00000000);
+  } > FLASH
 
   /DISCARD/ :
   {

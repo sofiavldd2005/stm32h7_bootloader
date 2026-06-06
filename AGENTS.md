@@ -9,8 +9,21 @@ This repository is a workspace for an ARM Cortex-M bootloader project.
 
 ## Status
 
-No build system, toolchain config, or source code has been scaffolded yet. Future work should set up:
-- A Rust embedded toolchain (`cortex-m-rt`, `cortex-m-semihosting`, target triple)
+Bootloader workspace scaffolded with custom vector tables and exception
+handlers from scratch (no `cortex-m-rt`). Dual-core bringup complete:
+
+- **CM7**: PLL1 at 392 MHz, LD2 blink (PE1), UART "Hello World"
+  (PD8/PD9, 115200 8N1)
+- **CM4**: LD1 blink (PB0) with custom vector table at `0x08100000`,
+  VTOR init, AHB4ENR self-enable
+
+### Critical debug notes
+
+- CM4 must set `AHB4ENR |= GPIOBEN` itself; CM7 setting it is
+  insufficient. See `CM4_GPIOB_ACCESS.md`.
+
+### Next
+
 - Build/test/lint configuration
 - CI workflows
 
