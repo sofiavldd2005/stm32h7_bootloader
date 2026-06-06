@@ -1,1 +1,0 @@
-/home/sofia/Documents/BootLoader/cm4/target/thumbv7em-none-eabihf/debug/cm4: /home/sofia/Documents/BootLoader/cm4/build.rs /home/sofia/Documents/BootLoader/cm4/link.x /home/sofia/Documents/BootLoader/cm4/memory.x /home/sofia/Documents/BootLoader/cm4/src/main.rs

@@ -127,7 +127,7 @@ fn system_init() {
     rcc.cfgr().modify(|_, w| w.sw().pll1());
     asm::dsb();
     while rcc.cfgr().read().sws().bits() != 3 {}
-
+    //CM4RST to hold CM4 in reset:
     const RCC_MP_C1GR1: *mut u32 = (0x5802_4400 + 0x100) as *mut u32;
     unsafe { core::ptr::write_volatile(RCC_MP_C1GR1, 0x01); }
 }
