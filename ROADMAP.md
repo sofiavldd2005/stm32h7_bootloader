@@ -99,10 +99,33 @@ Why: The H755 boots both cores by default. Leaving the CM4 running wild is undef
 
 ---
 
-## Phase 6 (Future) — Dual-Core Bootloader Architecture
-When you're ready to bring up the CM4:
-1. Partition flash: Reserve the lower 1 MB (0x08000000) for CM7 bootloader, upper 1 MB (0x08100000) for CM4 firmware. Update memory.x to limit CM7's flash region.  
-2. CM7 bootloader validates and loads CM4 firmware (verify CRC/signature).  
-3. Release CM4 from reset via RCC CM4RST clear, then set CM4BOOT in RCC_MP_C1GR2.  
-4. Inter-core communication using hardware semaphores (HSEM) and a shared memory mailbox.  
-5. Each core's vector table is at its respective flash origin (the CM4 has its own VTOR too).
+## Phase 6 — Dual-Core Bringup (Current)
+
+### 6.1 — Workspace & Flash Partitioning (Done)
+- [x] CM7: 1 MB at 0x08000000, CM4: 1 MB at 0x08100000
+- [x] cm4/ crate with custom vector table
+- [x] Both cores run free (no CM4 reset hold)
+
+### 6.2 — CM4 Firmware (Done)
+- [x] LD1 (PB0/green) blink
+- [x] stm32h7-staging PAC with stm32h747cm4 feature
+- [x] Linker script: FLASH 0x08100000, RAM 0x10000000
+- [x] VTOR self-initialized at Reset
+
+### 6.3 — GPIOB Debug (Done)
+- [x] Identified: CM4 must self-enable AHB4ENR for GPIOB
+- [x] Documented in CM4_GPIOB_ACCESS.md
+
+### 6.4 — Code Cleanup (Done)
+- [x] shared/ crate deduplicates Vector, EXCEPTIONS, delay, panic_handler
+- [x] Clippy-clean across all crates
+- [x] ROADMAP consolidation
+
+### 6.5 — Firmware Validation (Future)
+- [ ] CRC32 validation of CM4 firmware
+- [ ] Fail-safe LED pattern on CRC mismatch
+
+### 6.6 — Inter-Core Communication (Future)
+- [ ] HSEM hardware semaphores
+- [ ] Shared memory mailbox at 0x24000000
+- [ ] Ping/pong or shared state protocol

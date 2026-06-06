@@ -1,21 +1,28 @@
 #![no_std]
 #![no_main]
 
-use core::arch::asm;
-use core::panic::PanicInfo;
+
 
 use cortex_m::asm;
 use stm32h7_staging::stm32h747cm7 as device;
 
-pub union Vector {
-    reserved: u32,
-    handler: unsafe extern "C" fn() -> !,
-}
+#[allow(unused_imports)] //The unused imports in this case are required by the linker script
+use shared::{Vector, EXCEPTIONS, delay};
+
+
+#[unsafe(link_section = ".vector_table.reset_vector")]
+#[unsafe(no_mangle)]
+pub static RESET_VECTOR: unsafe extern "C" fn() -> ! = Reset;
 
 macro_rules! exceptions {
     ($($name:ident),*) => {
         $(
             #[unsafe(no_mangle)]
+            /// # Safety
+            ///
+            /// Exception handler called directly by the CPU on fault/event.
+            /// Must be installed at the correct vector table entry.
+
             pub unsafe extern "C" fn $name() -> ! { loop {} }
         )*
     }
@@ -23,29 +30,9 @@ macro_rules! exceptions {
 
 exceptions!(NMI, HardFault, MemManage, BusFault, UsageFault, SVCall, PendSV, SysTick);
 
-#[unsafe(link_section = ".vector_table.reset_vector")]
-#[unsafe(no_mangle)]
-pub static RESET_VECTOR: unsafe extern "C" fn() -> ! = Reset;
-
-#[unsafe(link_section = ".vector_table.exceptions")]
-#[unsafe(no_mangle)]
-pub static EXCEPTIONS: [Vector; 14] = [
-    Vector { handler: NMI },
-    Vector { handler: HardFault },
-    Vector { handler: MemManage },
-    Vector { handler: BusFault },
-    Vector { handler: UsageFault },
-    Vector { reserved: 0 },
-    Vector { reserved: 0 },
-    Vector { reserved: 0 },
-    Vector { reserved: 0 },
-    Vector { handler: SVCall },
-    Vector { reserved: 0 },
-    Vector { reserved: 0 },
-    Vector { handler: PendSV },
-    Vector { handler: SysTick },
-];
-
+/// # Safety
+///
+/// CPU reset entry point. Must be the second word in the vector table.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Reset() -> ! {
     let gpioe = unsafe { &*device::GPIOE::ptr() };
@@ -198,17 +185,6 @@ fn uart_hex(n: u32) {
     }
 }
 
-fn delay(cycles: u32) {
-    let mut i = cycles;
-    while i != 0 {
-        //aw asm!("nop") instead of cortex_m::asm::nop() with options(nomem, nostack,
-        //preserves_flags).
-        unsafe { asm!("nop"); }
-        i -= 1;
-    }
-}
 
-#[panic_handler]
-fn panic(_: &PanicInfo) -> ! {
-    loop {}
-}
+
+
