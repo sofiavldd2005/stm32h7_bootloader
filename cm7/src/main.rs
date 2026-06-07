@@ -7,7 +7,7 @@ use cortex_m::asm;
 use stm32h7_staging::stm32h747cm7 as device;
 
 #[allow(unused_imports)] //The unused imports in this case are required by the linker script
-use shared::{Vector, EXCEPTIONS, delay};
+use shared::{Vector, EXCEPTIONS, DIAG, delay};
 
 
 #[unsafe(link_section = ".vector_table.reset_vector")]
@@ -127,8 +127,13 @@ fn led_blink() -> ! {
 
     uart_init();
 
-    const SHARED_MAGIC: *const u32 = 0x2400_0000 as *const u32;
-    let magic = unsafe { core::ptr::read_volatile(SHARED_MAGIC) };
+    rcc.ahb4enr().modify(|_, w| w.hsemen().set_bit());
+    unsafe { core::arch::asm!("dsb"); }
+    // Handshake: wait for CM4, read magic, write DIAG, release
+    unsafe { shared::hsem_take(0, shared::COREID_CM7, shared::PROCID_DEFAULT); }
+    let magic = unsafe { core::ptr::read_volatile(shared::SHARED_MAGIC) };
+    unsafe { core::ptr::write_volatile(shared::DIAG, 0xCAFE_F00D); }
+    unsafe { shared::hsem_release(0, shared::COREID_CM7, shared::PROCID_DEFAULT); }
     uart_puts("CM4 magic: 0x");
     uart_hex(magic);
     uart_puts("\r\n");

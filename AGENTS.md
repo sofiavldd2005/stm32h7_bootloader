@@ -17,10 +17,28 @@ handlers from scratch (no `cortex-m-rt`). Dual-core bringup complete:
 - **CM4**: LD1 blink (PB0) with custom vector table at `0x08100000`,
   VTOR init, AHB4ENR self-enable
 
+### Dual-core handshake working
+
+- HSEM semaphore 0 used for inter-core sync:
+  - **CM4** CoreID = **1** (confirmed via RLR-based probe; HAL was correct)
+  - **CM7** CoreID = **3** (from HAL)
+  - CM4 writes magic → signals CM7 via sem → CM7 reads magic, writes DIAG
+    → CM4 reads DIAG (result `0xCAFE_F00D` at `0x2400000C`)
+
 ### Critical debug notes
 
 - CM4 must set `AHB4ENR |= GPIOBEN` itself; CM7 setting it is
   insufficient. See `CM4_GPIOB_ACCESS.md`.
+
+### HSEM AXI read-buffer workaround
+
+- Reading `HSEM_R[n]` after a write to the same register may return STALE
+  data (Cortex-M7 AXI read-buffer issue on STM32H7).
+- **Solution**: read `HSEM_RLR[n]` instead — it has **clear-on-read LOCK**
+  flag semantics and always returns correct data.
+- `shared::hsem_take()` / `shared::hsem_try_take()` / `shared::hsem_release()` all
+  use RLR-based detection.
+- Release writes COREID (not 0) to toggle the semaphore, per RM.
 
 ### Next
 
