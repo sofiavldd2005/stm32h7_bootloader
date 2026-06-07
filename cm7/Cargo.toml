@@ -11,3 +11,6 @@ stm32h7-staging = { version = "0.17.0", default-features = false, features = [
 ] }
 shared = { path = "../shared" }
 cortex-m = "0.7.7"
+
+[build-dependencies]
+object = "0.39.1"

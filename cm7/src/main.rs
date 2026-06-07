@@ -7,7 +7,8 @@ use cortex_m::asm;
 use stm32h7_staging::stm32h747cm7 as device;
 
 #[allow(unused_imports)] //The unused imports in this case are required by the linker script
-use shared::{Vector, EXCEPTIONS, DIAG, delay};
+use shared::{Vector, EXCEPTIONS, DIAG, delay, FW_APPROVED};
+include!(concat!(env!("OUT_DIR"), "/crc_golden.rs"));
 
 
 #[unsafe(link_section = ".vector_table.reset_vector")]
@@ -51,7 +52,7 @@ pub unsafe extern "C" fn Reset() -> ! {
     gpioe.bsrr().write(|w| w.br1().set_bit());
 
     system_init();
-    led_blink()
+    led_blink();
 }
 
 fn system_init() {
@@ -127,6 +128,23 @@ fn led_blink() -> ! {
 
     uart_init();
 
+    // --- Firmware validation ---
+    if validate_cm4_firmware() {
+        unsafe { core::ptr::write_volatile(FW_APPROVED, 0xDEAD_BEEF); }
+        uart_puts("CM4 CRC PASS\r\n");
+    } else {
+        unsafe { core::ptr::write_volatile(FW_APPROVED, 0); }
+        uart_puts("CM4 CRC FAIL\r\n");
+        // Fast blink forever
+        loop {
+            gpioe.bsrr().write(|w| w.bs1().set_bit());
+            delay(800_000);
+            gpioe.bsrr().write(|w| w.br1().set_bit());
+            delay(800_000);
+        }
+    }
+    // --- Handshake (existing) ---
+
     rcc.ahb4enr().modify(|_, w| w.hsemen().set_bit());
     unsafe { core::arch::asm!("dsb"); }
     // Handshake: wait for CM4, read magic, write DIAG, release
@@ -190,6 +208,25 @@ fn uart_hex(n: u32) {
     }
 }
 
+fn validate_cm4_firmware() -> bool {
+    let rcc    = unsafe { &*device::RCC::ptr() };
+    let crc    = unsafe { &*device::CRC::ptr() };
 
+    // Enable CRC clock
+    rcc.ahb4enr().modify(|_, w| w.crcen().set_bit());
+    unsafe { core::arch::asm!("dsb"); }
 
+    // Reset CRC unit
+    crc.cr().modify(|_, w| w.reset().reset());
 
+    // Feed 32-bit words: 0x0810_0000 .. 0x081F_FFFC (exclude last 4 bytes)
+    // Feed bytes one at a time — matches non-reflected CRC-32/MPEG2
+    let base = 0x0810_0000 as *const u8;
+    for i in 0..(1024 * 1024 - 4) {
+    let byte = unsafe { core::ptr::read_volatile(base.add(i)) };
+    crc.dr8().write(|w| unsafe { w.bits(byte) });
+    }
+    let computed = crc.dr().read().bits();
+
+    computed == CRC_GOLDEN
+}

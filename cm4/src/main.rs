@@ -6,7 +6,7 @@
 use stm32h7_staging::stm32h747cm4 as device;
 
 #[allow(unused_imports)]//These imports are required by the linker
-use shared::{Vector, EXCEPTIONS, DIAG, delay};
+use shared::{Vector, EXCEPTIONS, DIAG,FW_APPROVED, delay};
 
 
 #[unsafe(no_mangle)]
@@ -100,6 +100,26 @@ pub unsafe extern "C" fn Reset() -> ! {
         }
         delay(1_000);
     }
+    // Wait for CM7 firmware approval (5s timeout)
+    let mut approved = false;
+    for _ in 0..10 {
+        let fw = unsafe { core::ptr::read_volatile(FW_APPROVED) };
+        if fw == 0xDEAD_BEEF {
+            approved = true;
+            break;
+        }
+        delay(3_000_000); // ~500ms at 392 MHz
+    }
+    if !approved {
+        // Fast blink error
+        loop {
+            gpiob.bsrr().write(|w| w.bs0().set_bit());
+            delay(800_000);
+            gpiob.bsrr().write(|w| w.br0().set_bit());
+            delay(800_000);
+        }
+    }
+
     const MODER: *mut u32 = 0x5802_0400 as *mut u32;
     unsafe { core::ptr::write_volatile(MODER, 0xFFFF_FEB9); }
     unsafe { core::arch::asm!("dsb"); }

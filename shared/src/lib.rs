@@ -22,13 +22,12 @@ unsafe extern "C" {
 pub const SHARED_MAGIC: *mut u32 = 0x2400_0000 as *mut u32;
 pub const PROBE:       *mut u32 = 0x2400_0004 as *mut u32;
 pub const DIAG:        *mut u32 = 0x2400_0008 as *mut u32;
-
-// HSEM base addresses (pub so binary crates can probe)
-pub const HSEM_BASE: u32 = 0x5802_6400;
-pub const RLR_BASE: u32 = HSEM_BASE + 0x80; // RLR offset from base
-
-pub const COREID_CM7: u8 = 3; // CPU1 (from HAL: HSEM_CPU1_COREID)
-pub const COREID_CM4: u8 = 1; // CPU2 (from HAL: HSEM_CPU2_COREID)
+pub const FW_APPROVED: *mut u32 = 0x2400_0010 as *mut u32; ///< TO use with the CRC Check of CM4 flash
+// HSEM stuff
+pub const HSEM_BASE: u32 = 0x5802_6400; ///< HSEM base addresses (pub so binary crates can probe)
+pub const RLR_BASE: u32 = HSEM_BASE + 0x80; ///< RLR offset from base
+pub const COREID_CM7: u8 = 3; ///< CPU1 (from HAL: HSEM_CPU1_COREID)
+pub const COREID_CM4: u8 = 1; ///< CPU2 (from HAL: HSEM_CPU2_COREID)
 pub const PROCID_DEFAULT: u8 = 0;
 
 
@@ -60,8 +59,7 @@ pub fn panic(_: &PanicInfo) -> ! {
 pub fn delay(cycles: u32) {
     let mut i = cycles;
     while i != 0 {
-        //raw asm!("nop") instead of cortex_m::asm::nop() with options(nomem, nostack,
-        //preserves_flags).
+        //raw asm!("nop") instead of cortex_m::asm::nop() with options(nomem, nostack, preserves_flags).
         unsafe { asm!("nop"); }
         i -= 1;
     }
