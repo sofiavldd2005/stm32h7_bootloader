@@ -4,7 +4,12 @@ This repository is a workspace for an ARM Cortex-M bootloader project.
 
 ## Structure
 
-- `Literature/The Embedonomicon.pdf` — reference document on `cortex-m-rt` vector tables and startup code (Rust embedded)
+- `Literature/` — reference manuals (`.pdf` and pre-converted `.txt` for grep):
+  - `RM0399` — STM32H745/755/747/757 reference manual
+  - `PM0214` — Cortex-M4 programming manual
+  - `PM0253` — Cortex-M7 programming manual
+  - `The Embedonomicon` — Rust `cortex-m-rt` vector tables and startup code
+- `CODING_GUIDELINES.md` — rules for addressing RM lookups, PAC usage, table citations, and debug methodology
 - `opencode.json` — OpenCode agent permission rules (must ask before: editing, destructive `bash`, git mutating writes, `sudo` is denied)
 
 ## Status
