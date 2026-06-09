@@ -22,9 +22,22 @@ Update: Dual-core HSEM handshake working — CM4 writes magic, CM7 reads it and 
 | 3 | PLL1 → 392 MHz, SMPS, VOS1, LD2 (PE1) blink | Done |
 | 4 | USART3 "Hello World" (115200 8N1, PD8/PD9) | Done |
 | 5 | Dual-core bringup: CM4 LD1 blink (PB0) | Done |
-| 6 | Firmware validation, inter-core HSEM handshake | Done |
+| 6 | Dual-core bringup: CM4 blink, HSEM handshake | Done |
+| 6.5 | Firmware CRC validation | Done |
 
-_Phase 6 details:_ HSEM semaphore 0 used for inter-core sync. CM4 CoreID=1, CM7 CoreID=3. RLR-based lock detection works around Cortex-M7 AXI read-buffer issue. See [`docs/HSEM_STATE_FLOW.md`](docs/HSEM_STATE_FLOW.md) for the full state diagram.
+### Phase 6 details
+
+**HSEM handshake** — See [`docs/HSEM_STATE_FLOW.md`](docs/HSEM_STATE_FLOW.md) for the full state diagram.
+
+Semaphore 0 used for inter-core sync. CM4 CoreID=1, CM7 CoreID=3. RLR-based lock detection works around the Cortex-M7 AXI read-buffer stale-data issue.
+
+**CRC firmware validation** — See [`docs/CRC.md`](docs/CRC.md) for details.
+
+At build time, `cm7/build.rs` reads the CM4 ELF, extracts the binary content, and computes a CRC-32/MPEG2 checksum. This golden CRC is embedded as a constant in CM7 via `include!`.
+
+At boot, CM7 uses the hardware CRC peripheral to re-compute the CRC of the CM4 flash region (byte-at-a-time via `CRC_DR8`). If the computed CRC matches the golden value, CM7 writes `0xDEAD_BEEF` to `FW_APPROVED` in shared memory and proceeds to the HSEM handshake. On mismatch, LD2 fast-blinks and the bootloader halts.
+
+CM4 polls `FW_APPROVED` with a 5-second timeout before entering its normal blink loop.
 
 ## AI Disclaimer
 
@@ -34,5 +47,8 @@ An AI assistant (OpenCode) was used to:
 - Write the USART3 initialization and byte-transmit logic (Phase 4)
 - Troubleshoot and fix the HSEM inter-core handshake implementation
   (RLR-based lock detection, AXI read-buffer workaround, COREID probing)
+- Implement the CRC-32/MPEG2 firmware validation system (build.rs + hardware CRC)
+- Debug the CRC mismatch caused by reflected vs non-reflected CRC algorithm mismatch
+- Refactor monolithic main.rs into modules (uart, clock, crc, handshake)
 
-All outputed code by AI was reviewed by a human developer.
+All output code by AI was reviewed by a human developer.

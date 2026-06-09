@@ -121,11 +121,14 @@ Why: The H755 boots both cores by default. Leaving the CM4 running wild is undef
 - [x] Clippy-clean across all crates
 - [x] ROADMAP consolidation
 
-### 6.5 — Firmware Validation (Future)
-- [ ] CRC32 validation of CM4 firmware
-- [ ] Fail-safe LED pattern on CRC mismatch
+### 6.5 — Firmware Validation (Done)
+- [X] CRC32 validation of CM4 firmware
+- [X] Fail-safe LED pattern on CRC mismatch
+- [X] Build-time golden CRC via cm7/build.rs
+- [X] Runtime CRC via STM32 CRC peripheral (byte-at-a-time, CRC-32/MPEG2)
+- [X] FW_APPROVED shared-memory handshake with 5s CM4 timeout
 
 ### 6.6 — Inter-Core Communication (Future)
-- [ ] HSEM hardware semaphores
-- [ ] Shared memory mailbox at 0x24000000
-- [ ] Ping/pong or shared state protocol
+- [X] HSEM hardware semaphores
+- [X] Shared memory mailbox at 0x24000000
+- [] Ping/pong or shared state protocol
