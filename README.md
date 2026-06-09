@@ -49,6 +49,6 @@ An AI assistant (OpenCode) was used to:
   (RLR-based lock detection, AXI read-buffer workaround, COREID probing)
 - Implement the CRC-32/MPEG2 firmware validation system (build.rs + hardware CRC)
 - Debug the CRC mismatch caused by reflected vs non-reflected CRC algorithm mismatch
-- Refactor monolithic main.rs into modules (uart, clock, crc, handshake)
+  
 
 All output code by AI was reviewed by a human developer.
