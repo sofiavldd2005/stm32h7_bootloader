@@ -48,3 +48,25 @@ pub fn hex(n: u32) {
         putc(c);
     }
 }
+
+/// Read a byte from UART, blocking until one arrives.
+pub fn getc() -> u8 {
+    let usart3 = unsafe { &*device::USART3::ptr() };
+    while !usart3.isr().read().rxne().bit_is_set() {}
+    usart3.rdr().read().rdr().bits() as u8
+}
+
+/// Read a byte with a cycle-count timeout.
+///
+/// Returns `None` if no byte arrives within `timeout_cycles`.
+pub fn getc_timeout(timeout_cycles: u32) -> Option<u8> {
+    let usart3 = unsafe { &*device::USART3::ptr() };
+    let mut count = timeout_cycles;
+    while !usart3.isr().read().rxne().bit_is_set() {
+        count -= 1;
+        if count == 0 {
+            return None;
+        }
+    }
+    Some(usart3.rdr().read().rdr().bits() as u8)
+}

@@ -128,7 +128,47 @@ Why: The H755 boots both cores by default. Leaving the CM4 running wild is undef
 - [X] Runtime CRC via STM32 CRC peripheral (byte-at-a-time, CRC-32/MPEG2)
 - [X] FW_APPROVED shared-memory handshake with 5s CM4 timeout
 
-### 6.6 — Inter-Core Communication (Future)
+### 6.6 — Inter-Core Communication (Done)
 - [X] HSEM hardware semaphores
 - [X] Shared memory mailbox at 0x24000000
-- [] Ping/pong or shared state protocol
+- [X] Shared-memory handshake (magic → DIAG → FW_APPROVED → BOOT_MODE)
+
+---
+
+## Phase 7 — Boot Decision (Done)
+
+- [x] BOOT_MODE shared memory constant (NORMAL / UPDATE)
+- [x] Button read on PC13 (B1, active-HIGH, external pull-down)
+- [x] Update mode entry: 3 fast LD2 blinks, skip CRC, infinite blink loop
+- [x] CM4 reads BOOT_MODE, skips FW_APPROVED poll in UPDATE mode
+- [x] `docs/PHASE7.md`, `docs/ROADMAP.md` — design specification
+- [x] GPIO spacing fix (0x400 per port, GPIOC at 0x5802_0800)
+- [x] DSB barriers for AXI ordering, PUPDR pulled down externally
+
+## Phase 8 — Firmware Upgrade Protocol
+
+**Design decisions**:
+- Protocol: Postcard serde + COBS framing with `0x00` delimiter
+- Transport: Trait-based abstraction (`Transport` trait, `dyn` dispatch)
+- Host tool: Native Rust binary with `serialport` + `clap`
+- Boot command: Triggers system reset (SYSRESETREQ) instead of jumping in-place
+- build.rs golden CRC: Kept as normal-boot guard (not removed)
+- CM4 behavior in UPDATE: Kept as-is (slow-blink, skip FW_APPROVED poll)
+- Host CRC: Reuses our own `crc32_mpeg2()` function (same algo as build.rs)
+- Buffer: Fixed 512-byte stack buffer (no alloc, no heapless)
+- Error codes: BadAddr=0x01, BadLength=0x02, FlashErr=0x03, CrcMismatch=0x04, Busy=0x05
+
+### Phase 8a — Shared protocol types
+- [ ] Add serde, postcard, cobs deps to `shared/Cargo.toml` (no_std)
+- [ ] Create `shared/src/protocol.rs` — HostCommand, HostReply enums
+
+### Phase 8b — CM7 protocol handler
+- [ ] Add `getc()`, `getc_timeout()` to `cm7/src/uart.rs`
+- [ ] Create `cm7/src/flash.rs` — unlock, sector_erase, program_word, verify
+- [ ] Create `cm7/src/protocol.rs` — Transport trait, UartTransport, COBS encode/decode, command dispatch loop
+- [ ] Wire protocol loop into update mode path in `cm7/src/main.rs`
+
+### Phase 8c — Host CLI tool
+- [ ] Create `host/` crate with serialport, clap, crc32_mpeg2
+- [ ] Implement subcommands: ping, erase, flash, crc, boot
+- [ ] End-to-end: flash CM4 firmware via UART

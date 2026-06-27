@@ -8,14 +8,14 @@ pub fn sync_with_cm4() -> u32 {
     }
 
     unsafe {
-        shared::hsem_take(0, shared::COREID_CM7, shared::PROCID_DEFAULT);
+        shared::hsem_take(0, shared::mem::COREID_CM7, shared::mem::PROCID_DEFAULT);
     }
-    let magic = unsafe { core::ptr::read_volatile(shared::SHARED_MAGIC) };
+    let magic = unsafe { core::ptr::read_volatile(shared::mem::SHARED_MAGIC) };
     unsafe {
-        core::ptr::write_volatile(shared::DIAG, 0xCAFE_F00D);
+        core::ptr::write_volatile(shared::mem::DIAG, 0xCAFE_F00D);
     }
     unsafe {
-        shared::hsem_release(0, shared::COREID_CM7, shared::PROCID_DEFAULT);
+        shared::hsem_release(0, shared::mem::COREID_CM7, shared::mem::PROCID_DEFAULT);
     }
     magic
 }

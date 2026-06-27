@@ -1,13 +1,19 @@
 #![no_std]
+pub mod mem;
+pub mod protocol;
 
-use core::panic::PanicInfo;
+#[cfg(feature = "cortex-m")]
 use core::arch::asm;
+#[cfg(feature = "cortex-m")]
+use core::panic::PanicInfo;
+
+#[cfg(feature = "cortex-m")]
 pub union Vector {
     reserved: u32,
     handler: unsafe extern "C" fn() -> !,
 }
 
-
+#[cfg(feature = "cortex-m")]
 unsafe extern "C" {
     fn NMI() -> !;
     fn HardFault() -> !;
@@ -18,19 +24,8 @@ unsafe extern "C" {
     fn PendSV() -> !;
     fn SysTick() -> !;
 }
-// Shared-memory layout (already there)
-pub const SHARED_MAGIC: *mut u32 = 0x2400_0000 as *mut u32;
-pub const PROBE:       *mut u32 = 0x2400_0004 as *mut u32;
-pub const DIAG:        *mut u32 = 0x2400_0008 as *mut u32;
-pub const FW_APPROVED: *mut u32 = 0x2400_0010 as *mut u32; ///< TO use with the CRC Check of CM4 flash
-// HSEM stuff
-pub const HSEM_BASE: u32 = 0x5802_6400; ///< HSEM base addresses (pub so binary crates can probe)
-pub const RLR_BASE: u32 = HSEM_BASE + 0x80; ///< RLR offset from base
-pub const COREID_CM7: u8 = 3; ///< CPU1 (from HAL: HSEM_CPU1_COREID)
-pub const COREID_CM4: u8 = 1; ///< CPU2 (from HAL: HSEM_CPU2_COREID)
-pub const PROCID_DEFAULT: u8 = 0;
 
-
+#[cfg(feature = "cortex-m")]
 #[unsafe(link_section = ".vector_table.exceptions")]
 #[unsafe(no_mangle)]
 pub static EXCEPTIONS: [Vector; 14] = [
@@ -50,12 +45,14 @@ pub static EXCEPTIONS: [Vector; 14] = [
     Vector { handler: SysTick },
 ];
 
+#[cfg(feature = "cortex-m")]
 #[panic_handler]
 pub fn panic(_: &PanicInfo) -> ! {
     loop {}
 }
 
 /// My own HalDelay() implementation
+#[cfg(feature = "cortex-m")]
 pub fn delay(cycles: u32) {
     let mut i = cycles;
     while i != 0 {
@@ -65,8 +62,11 @@ pub fn delay(cycles: u32) {
     }
 }
 
+#[cfg(feature = "cortex-m")]
 const LOCK_BIT: u32 = 1 << 31;
+#[cfg(feature = "cortex-m")]
 const COREID_MASK: u32 = 0x0F;
+#[cfg(feature = "cortex-m")]
 const COREID_SHIFT: u32 = 8;
 
 /// Try to take a semaphore (non-blocking).
@@ -76,9 +76,10 @@ const COREID_SHIFT: u32 = 8;
 /// # Safety
 ///
 /// Same as `hsem_take`.
+#[cfg(feature = "cortex-m")]
 pub unsafe fn hsem_try_take(sem: usize, coreid: u8, procid: u8) -> bool {
-    let r_reg   = (HSEM_BASE + sem as u32 * 4) as *mut u32;
-    let rlr_reg = (RLR_BASE + sem as u32 * 4) as *mut u32;
+    let r_reg   = (mem::HSEM_BASE + sem as u32 * 4) as *mut u32;
+    let rlr_reg = (mem::RLR_BASE + sem as u32 * 4) as *mut u32;
     let val = (coreid as u32) << COREID_SHIFT | procid as u32;
     unsafe { core::ptr::read_volatile(rlr_reg); }
     unsafe { core::ptr::write_volatile(r_reg, val); }
@@ -96,9 +97,10 @@ pub unsafe fn hsem_try_take(sem: usize, coreid: u8, procid: u8) -> bool {
 ///
 /// - `coreid` must match the calling CPU.
 /// - `sem` must be 0..31.
+#[cfg(feature = "cortex-m")]
 pub unsafe fn hsem_take(sem: usize, coreid: u8, procid: u8) {
-    let r_reg   = (HSEM_BASE + sem as u32 * 4) as *mut u32;
-    let rlr_reg = (RLR_BASE + sem as u32 * 4) as *mut u32;
+    let r_reg   = (mem::HSEM_BASE + sem as u32 * 4) as *mut u32;
+    let rlr_reg = (mem::RLR_BASE + sem as u32 * 4) as *mut u32;
     let val = (coreid as u32) << COREID_SHIFT | procid as u32;
     loop {
         // 1: Clear RLR.LOCK flag by reading it (clear-on-read)
@@ -123,8 +125,9 @@ pub unsafe fn hsem_take(sem: usize, coreid: u8, procid: u8) {
 /// # Safety
 ///
 /// Must be called from the same core that took it.
+#[cfg(feature = "cortex-m")]
 pub unsafe fn hsem_release(sem: usize, coreid: u8, procid: u8) {
-    let r_reg = (HSEM_BASE + sem as u32 * 4) as *mut u32;
+    let r_reg = (mem::HSEM_BASE + sem as u32 * 4) as *mut u32;
     let val = (coreid as u32) << COREID_SHIFT | procid as u32;
     unsafe { core::ptr::write_volatile(r_reg, val); }
     unsafe { core::arch::asm!("dmb"); }
