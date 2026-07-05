@@ -30,7 +30,7 @@ const BUF_SIZE: usize = 512;
 ///
 /// Returns the number of bytes written (includes the trailing `0x00` delimiter).
 fn cobs_encode(input: &[u8], output: &mut [u8]) -> usize {
-    let mut code = 0xFFu8;
+    let mut code = 1u8;
     let mut code_pos = 0usize;
     let mut out_pos = 1;
 
@@ -39,11 +39,17 @@ fn cobs_encode(input: &[u8], output: &mut [u8]) -> usize {
             output[code_pos] = (i - code_pos + 1) as u8;
             code_pos = out_pos;
             out_pos += 1;
-            code = 0xFF;
+            code = 1;
         } else {
             output[out_pos] = byte;
             out_pos += 1;
-            code = code.wrapping_add(1);
+            code += 1;
+            if code == 0xFF {
+                output[code_pos] = 0xFF;
+                code_pos = out_pos;
+                out_pos += 1;
+                code = 1;
+            }
         }
     }
     output[code_pos] = code;
@@ -171,19 +177,9 @@ fn dispatch(cmd: &HostCommand) -> HostReply {
         }
 
         HostCommand::Crc32 { addr, len } => {
-            uart::puts("CRC32: addr=0x");
-            uart::hex(*addr);
-            uart::puts(" len=0x");
-            uart::hex(*len);
-            uart::puts("\r\n");
             let crc = unsafe { crc::compute_region(*addr, *len) };
             match crc {
-                Some(crc_val) => {
-                    uart::puts("CRC result=0x");
-                    uart::hex(crc_val);
-                    uart::puts("\r\n");
-                    HostReply::CrcResult(crc_val)
-                }
+                Some(crc_val) => HostReply::CrcResult(crc_val),
                 None => HostReply::Nak(error::BAD_ADDRESS),
             }
         }

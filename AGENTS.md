@@ -59,6 +59,8 @@ handlers from scratch (no `cortex-m-rt`). Dual-core bringup complete:
 - **GPIO init requires DSB**: AHB4ENR clock-enable and MODER/PUPDR writes need `asm!("dsb")` to guarantee ordering on Cortex-M7 AXI bus.
 - **Analog-mode bug**: STM32H7 GPIO defaults to MODER=3 (analog), IDR reads 0 → false "button pressed". Must configure MODER=00 and enable PUPDR pull-up before reading.
 - CM4 must set `AHB4ENR |= GPIOBEN` itself; CM7 setting it is insufficient. See `CM4_GPIOB_ACCESS.md`.
+- **Flash AXI Write Buffer (`FW` bit)**: STM32H7 flash uses 256-bit words. Partial writes (< 256 bits) sit in a buffer. The `FW` (Force Write) bit in `CR` must be set **AFTER** writing the data to the memory address to flush the buffer. Setting `FW` before the data write flushes an empty buffer and discards the actual data.
+- **Flash KEYR2 Address**: When `SWAP_BANK=0`, `FLASH_KEYR2` is at offset `0x104` (not `0x108` as some RM tables imply). The `stm32h7-staging` PAC is correct (`bank2().keyr()`).
 
 ### HSEM AXI read-buffer workaround
 
@@ -69,7 +71,7 @@ handlers from scratch (no `cortex-m-rt`). Dual-core bringup complete:
 
 ### Next
 
-- Phase 8: Postcard+COBS UART firmware upgrade protocol, flash HAL, host CLI
+- Phase 8: Postcard+COBS UART firmware upgrade protocol, host CLI
 - CI pipelines, build/test/lint configuration
 
 ## Agent constraints (from `opencode.json`)

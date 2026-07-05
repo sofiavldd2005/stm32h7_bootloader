@@ -24,6 +24,8 @@ Update: Dual-core HSEM handshake working — CM4 writes magic, CM7 reads it and 
 | 5 | Dual-core bringup: CM4 LD1 blink (PB0) | Done |
 | 6 | Dual-core bringup: CM4 blink, HSEM handshake | Done |
 | 6.5 | Firmware CRC validation | Done |
+| 7 | Boot mode selection and flash programming | Done |
+| 8 | Host CLI and upgrade protocol | In Progress |
 
 ### Phase 6 details
 
@@ -38,6 +40,12 @@ At build time, `cm7/build.rs` reads the CM4 ELF, extracts the binary content, an
 At boot, CM7 uses the hardware CRC peripheral to re-compute the CRC of the CM4 flash region (byte-at-a-time via `CRC_DR8`). If the computed CRC matches the golden value, CM7 writes `0xDEAD_BEEF` to `FW_APPROVED` in shared memory and proceeds to the HSEM handshake. On mismatch, LD2 fast-blinks and the bootloader halts.
 
 CM4 polls `FW_APPROVED` with a 5-second timeout before entering its normal blink loop.
+
+### Phase 7 details
+
+**Flash AXI Programming** — See [`docs/FLASH_AXI_PROGRAMMING.md`](docs/FLASH_AXI_PROGRAMMING.md) for details.
+
+The CM7 core implements flash erase and write capabilities for Bank 2 (the CM4 region). Writing to the STM32H7 AXI flash requires special handling due to the 256-bit write buffer: partial writes (e.g., 32-bit words) must be forced to flush using the `FW` bit in the `FLASH_CR2` register **after** the data is written to the memory-mapped address.
 
 ## AI Disclaimer
 

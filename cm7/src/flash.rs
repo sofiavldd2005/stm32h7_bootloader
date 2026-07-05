@@ -8,9 +8,11 @@ const CM4_FLASH_END: u32 = 0x0820_0000;
 /// Sector size (128 KB).
 const SECTOR_SIZE: u32 = 0x0002_0000;
 
-/// Unlock flash Bank 2 for write/erase.
 unsafe fn unlock() {
     let flash = unsafe { &*device::FLASH::ptr() };
+    if flash.bank2().cr().read().lock().bit_is_clear() {
+        return;
+    }
     flash.bank2().keyr().write(|w| unsafe { w.bits(0x45670123) });
     flash.bank2().keyr().write(|w| unsafe { w.bits(0xCDEF89AB) });
 }
@@ -21,10 +23,20 @@ unsafe fn lock() {
     flash.bank2().cr().modify(|_, w| w.lock().set_bit());
 }
 
-/// Spin until flash Bank 2 reports ready (BSY = 0).
+/// Return the raw SR2 register value for diagnostics.
+pub fn read_sr2() -> u32 {
+    let flash = unsafe { &*device::FLASH::ptr() };
+    flash.bank2().sr().read().bits()
+}
+
 unsafe fn wait_ready() {
     let flash = unsafe { &*device::FLASH::ptr() };
-    while flash.bank2().sr().read().bsy().bit_is_set() {}
+    loop {
+        let sr = flash.bank2().sr().read();
+        if !sr.bsy().bit_is_set() && !sr.qw().bit_is_set() {
+            break;
+        }
+    }
 }
 
 /// Erase one sector in Bank 2.
@@ -79,25 +91,55 @@ pub unsafe fn program_word(addr: u32, data: u32) -> Result<(), ()> {
     unsafe { unlock(); }
     unsafe { wait_ready(); }
 
-    flash.bank2().cr().modify(|_, w| w.pg().set_bit());
-    asm::dmb();
+    // 1. Enable programming and set PSIZE to 32-bit (2)
+    flash.bank2().cr().modify(|_, w| w.pg().set_bit().psize().bits(2));
+    asm::dsb();
 
+    // 2. Write the 32-bit word to the flash address
     unsafe { core::ptr::write_volatile(addr as *mut u32, data); }
-    asm::dmb();
+    asm::dsb();
 
-    unsafe { wait_ready(); }
+    // 3. Force flush the partial 256-bit write buffer
+    flash.bank2().cr().modify(|_, w| w.fw().set_bit());
+    asm::dsb();
 
+    // Wait for BSY to clear (and write buffer to drain)
+    loop {
+        let sr = flash.bank2().sr().read();
+        if !sr.bsy().bit_is_set() && !sr.qw().bit_is_set() {
+            break;
+        }
+    }
+
+    // 4. Disable programming
     flash.bank2().cr().modify(|_, w| w.pg().clear_bit());
     flash.bank2().ccr().write(|w| w.clr_eop().set_bit());
 
+    // Check all error flags; clear and bail on any.
     let sr = flash.bank2().sr().read();
-    if sr.wrperr().bit_is_set() {
-        flash.bank2().ccr().write(|w| w.clr_wrperr().set_bit());
+    let any_err = sr.wrperr().bit_is_set()
+        || sr.pgserr().bit_is_set()
+        || sr.strberr().bit_is_set()
+        || sr.incerr().bit_is_set()
+        || sr.operr().bit_is_set();
+    if any_err {
+        flash.bank2().ccr().write(|w| {
+            w.clr_wrperr().set_bit()
+             .clr_pgserr().set_bit()
+             .clr_strberr().set_bit()
+             .clr_incerr().set_bit()
+             .clr_operr().set_bit()
+        });
         unsafe { lock(); }
         return Err(());
     }
 
-    if unsafe { core::ptr::read_volatile(addr as *const u32) } != data {
+    // Flush AXI read buffer before read-back verify
+    asm::dsb();
+    let _ = unsafe { core::ptr::read_volatile(0x2400_0000 as *const u32) };
+    asm::dsb();
+    let readback = unsafe { core::ptr::read_volatile(addr as *const u32) };
+    if readback != data {
         unsafe { lock(); }
         return Err(());
     }

@@ -9,4 +9,4 @@ edition = "2024"
 shared = { path = "../shared", default-features = false }
 postcard = { version = "1", features = ["alloc"] }
 serialport = "4"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"] }

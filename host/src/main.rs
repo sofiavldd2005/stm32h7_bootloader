@@ -34,7 +34,7 @@ const MAX_FRAME: usize = 512;
 
 fn cobs_encode(input: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(input.len() + 2);
-    let mut code = 0xFFu8;
+    let mut code = 1u8;
     let mut code_pos = 0usize;
 
     out.push(0); // placeholder
@@ -44,10 +44,16 @@ fn cobs_encode(input: &[u8]) -> Vec<u8> {
             out[code_pos] = (out.len() - code_pos) as u8;
             code_pos = out.len();
             out.push(0);
-            code = 0xFF;
+            code = 1;
         } else {
             out.push(byte);
-            code = code.wrapping_add(1);
+            code += 1;
+            if code == 0xFF {
+                out[code_pos] = 0xFF;
+                code_pos = out.len();
+                out.push(0);
+                code = 1;
+            }
         }
     }
     out[code_pos] = code;
