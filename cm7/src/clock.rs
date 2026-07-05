@@ -54,8 +54,8 @@ pub fn system_init() {
         .modify(|_, w| unsafe { w.d2ppre1().bits(4).d2ppre2().bits(4) });
     rcc.d3cfgr().modify(|_, w| unsafe { w.d3ppre().bits(4) });
 
-    flash.acr().modify(|_, w| unsafe { w.latency().bits(2) });
-    while flash.acr().read().latency().bits() != 2 {}
+    flash.acr().modify(|_, w| unsafe { w.latency().bits(3) });
+    while flash.acr().read().latency().bits() != 3 {}
 
     rcc.cfgr().modify(|_, w| w.sw().pll1());
     asm::dsb();

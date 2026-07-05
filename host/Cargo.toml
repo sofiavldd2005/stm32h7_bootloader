@@ -1,0 +1,12 @@
+[package]
+name = "host"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+shared = { path = "../shared", default-features = false }
+postcard = { version = "1", features = ["alloc"] }
+serialport = "4"
+clap = { version = "4.6.1", features = ["derive"] }
